@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuaderno Digital: Óptica Geométrica</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Kalam:wght@400;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <!-- Chart.js & Plugins -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+    <!-- Utilities -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        /* CSS reset & base */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background: #111827 radial-gradient(circle at top right, #1f2937, #0f172a); 
+            font-family: 'Inter', sans-serif; color: #1e293b; overflow: hidden; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            height: 100vh; perspective: 2000px; margin: 0; transition: background 0.5s; 
+        }
+        body.light-mode { background: #e2e8f0 radial-gradient(circle at top right, #f8fafc, #cbd5e1); }
+        
+        h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; color: #0f172a; margin-bottom: 0.5rem; }
+        .light-mode h1, .light-mode h2, .light-mode h3, .light-mode h4 { color: #1e293b; }
+        
+        .toolbar { position: absolute; top: 20px; right: 30px; display: flex; gap: 15px; z-index: 100; }
+        .btn-tool { 
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
+            padding: 10px 18px; border-radius: 30px; cursor: pointer; 
+            font-family: 'Outfit'; font-weight: 600; color: #f8fafc; 
+            display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .btn-tool:hover { background: rgba(255,255,255,0.9); color: #0f172a; transform: translateY(-3px); box-shadow: 0 8px 25px rgba(255,255,255,0.2); }
+        .light-mode .btn-tool { background: rgba(0,0,0,0.1); color: #1e293b; border-color: rgba(0,0,0,0.2); }
+        .light-mode .btn-tool:hover { background: #0f172a; color: #f8fafc; }
+
+        .notebook-wrapper { position: relative; width: 92vw; max-width: 1400px; height: 86vh; transform-style: preserve-3d; }
+        .notebook { display: flex; width: 100%; height: 100%; background: transparent; position: relative; }
+        .spine { 
+            position: absolute; left: 50%; top: -10px; bottom: -10px; width: 50px; 
+            transform: translateX(-50%); background: linear-gradient(to right, #9ca3af, #f3f4f6, #9ca3af); 
+            border-left: 2px solid #6b7280; border-right: 2px solid #6b7280; z-index: 20; 
+            display: flex; flex-direction: column; justify-content: space-evenly; align-items: center; 
+            padding: 20px 0; box-shadow: inset 0 0 15px rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.4); border-radius: 3px; 
+        }
+        .ring { width: 65px; height: 12px; border-radius: 6px; background: linear-gradient(to bottom, #111, #444, #111, #000); box-shadow: 0 4px 6px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.2); z-index: 22; }
+        .page-container { flex: 1; height: 100%; position: relative; transform-style: preserve-3d; perspective: 3000px; }
+        .page { 
+            width: 50%; height: 100%; position: absolute; top: 0; padding: 45px 65px; 
+            overflow-y: auto; overflow-x: hidden; background-color: #fdfdfc; 
+            backface-visibility: hidden; border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,0,0,0.02), 0 5px 15px rgba(0,0,0,0.3); 
+        }
+        .page-left { left: 0; border-right: 1px solid #e0e0e0; transform-origin: right center; transform: rotateY(0deg); opacity: 0; z-index: 1; }
+        .page-right { left: 50%; border-left: 1px solid #e0e0e0; transform-origin: left center; transform: rotateY(0deg); opacity: 0; z-index: 1; }
+        .page-left.active, .page-right.active { opacity: 1; z-index: 5; }
+
+        @keyframes turnNextRightOut { 0% { transform: rotateY(0deg); opacity: 1; z-index: 10; } 49% { transform: rotateY(-90deg); opacity: 1; z-index: 10;} 50% { transform: rotateY(-90deg); opacity: 0; z-index: 1;} 100% { transform: rotateY(-180deg); opacity: 0; z-index: 1; } }
+        @keyframes turnNextLeftIn { 0% { transform: rotateY(180deg); opacity: 0; z-index: 1;} 49% { transform: rotateY(90deg); opacity: 0; z-index: 1;} 50% { transform: rotateY(90deg); opacity: 1; z-index: 10; } 100% { transform: rotateY(0deg); opacity: 1; z-index: 10;} }
+        @keyframes turnPrevLeftOut { 0% { transform: rotateY(0deg); opacity: 1; z-index: 10; } 49% { transform: rotateY(90deg); opacity: 1; z-index: 10;} 50% { transform: rotateY(90deg); opacity: 0; z-index: 1;} 100% { transform: rotateY(180deg); opacity: 0; z-index: 1; } }
+        @keyframes turnPrevRightIn { 0% { transform: rotateY(-180deg); opacity: 0; z-index: 1;} 49% { transform: rotateY(-90deg); opacity: 0; z-index: 1;} 50% { transform: rotateY(-90deg); opacity: 1; z-index: 10; } 100% { transform: rotateY(0deg); opacity: 1; z-index: 10;} }
+        .anim-next-out { animation: turnNextRightOut 0.85s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
+        .anim-next-in { animation: turnNextLeftIn 0.85s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
+        .anim-prev-out { animation: turnPrevLeftOut 0.85s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
+        .anim-prev-in { animation: turnPrevRightIn 0.85s cubic-bezier(0.3, 0.0, 0.2, 1) forwards; }
+
+        .paper-lined { background-color: #faf9f6; background-image: repeating-linear-gradient(transparent, transparent 31px, #cbd5e1 31px, #cbd5e1 32px); line-height: 32px; background-attachment: local; }
+        .paper-lined.page-left::before { content: ''; position: absolute; right: 60px; top: 0; bottom: 0; width: 2px; background: #fca5a5; opacity: 0.7; z-index: -1; }
+        .paper-lined.page-right::before { content: ''; position: absolute; left: 60px; top: 0; bottom: 0; width: 2px; background: #fca5a5; opacity: 0.7; z-index: -1; }
+        .paper-graph { background-color: #f8fafc; background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px), linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, #cbd5e1 1px, transparent 1px); background-size: 15px 15px, 15px 15px, 75px 75px, 75px 75px; background-attachment: local; }
+        .page-number { position: absolute; bottom: 20px; font-family: 'Outfit'; font-size: 1rem; color: #94a3b8; font-weight: bold; }
+        .page-left .page-number { left: 35px; }
+        .page-right .page-number { right: 35px; }
+
+        .nav-btn { 
+            position: absolute; bottom: -60px; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(5px); 
+            color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 30px; border-radius: 8px; 
+            cursor: pointer; font-family: 'Outfit'; font-weight: 600; font-size: 1.1rem; transition: all 0.3s; 
+            z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-transform: uppercase; letter-spacing: 1px; 
+        }
+        .nav-btn:hover { background: #0ea5e9; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(14, 165, 233, 0.4); }
+        .nav-btn:disabled { background: #64748b; cursor: not-allowed; opacity: 0.5; transform: none; box-shadow: none;}
+        #btn-prev { left: 0%; transform: translateX(20px); }
+        #btn-next { right: 0%; transform: translateX(-20px); }
+
+        .title-hand { font-family: 'Kalam', cursive; font-size: 3.5rem; color: #0f172a; text-align: center; margin-top: 30px; line-height: 1.2; text-shadow: 1px 1px 0 rgba(255,255,255,0.8); }
+        .subtitle { font-family: 'Outfit'; font-size: 1.2rem; color: #475569; text-align: center; margin-top: 15px; font-weight: 600; }
+        .author { font-style: italic; text-align: center; margin-top: 25px; color: #64748b; font-size: 1.1rem; }
+        p, li { font-size: 1.1rem; margin-bottom: 0.9rem; text-align: justify; line-height: 1.8; color: #334155; }
+        .highlight { background: rgba(56, 189, 248, 0.2); padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #0284c7; }
+        .alert-box { background: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+        .math-box { font-size: 1.35rem; text-align: center; margin: 25px 0; padding: 15px; background: rgba(255,255,255,0.8); border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        
+        .dashboard { background: rgba(255,255,255,0.9); border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-top: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); position: relative; backdrop-filter: blur(10px); }
+        .telemetry { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-box { background: linear-gradient(135deg, #f8fafc, #f1f5f9); padding: 15px 10px; border-radius: 8px; text-align: center; border-bottom: 4px solid #0ea5e9; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; }
+        .stat-box:hover { transform: translateY(-2px); }
+        .stat-val { font-size: 1.6rem; font-weight: 800; font-family: 'Outfit'; color: #0f172a; }
+        .stat-lbl { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-top: 5px; }
+        .stat-box.alert { border-bottom-color: #ef4444; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);} 70% {box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);} 100% {box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);} }
+        
+        .control-group { margin-bottom: 20px; }
+        .control-group label { font-family: 'Outfit'; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 1.05rem; color: #1e293b; }
+        input[type=range] { width: 100%; cursor: pointer; height: 6px; background: #cbd5e1; border-radius: 3px; outline: none; -webkit-appearance: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #0ea5e9; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        select { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: 'Inter'; font-size: 1rem; outline: none; background: #f8fafc; }
+        
+        .btn-action { padding: 12px; background: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-family: 'Outfit'; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3); }
+        .btn-action:hover { background: #0284c7; box-shadow: 0 6px 12px rgba(14, 165, 233, 0.4); transform: translateY(-1px); }
+        
+        canvas { width: 100%; background: #0f172a; border-radius: 12px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 10px 25px rgba(0,0,0,0.15); margin-top: 15px; cursor: crosshair; display: block; }
+        
+        .chart-container { width: 100%; position: relative; margin-bottom: 20px; background: rgba(255,255,255,0.9); border-radius: 12px; padding: 15px; border: 1px solid #cbd5e1; box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+        
+        .chatbot { position: fixed; bottom: 35px; right: 35px; z-index: 200; display: flex; flex-direction: column; align-items: flex-end; perspective: 1000px; }
+        .chat-bubble-btn { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; cursor: pointer; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4); border: 3px solid white; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .chat-bubble-btn:hover { transform: scale(1.1) rotate(-5deg); box-shadow: 0 15px 35px rgba(16, 185, 129, 0.6); }
+        .chat-panel { width: 380px; height: 500px; background: white; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden; display: none; flex-direction: column; margin-bottom: 20px; border: 1px solid #e2e8f0; transform-origin: bottom right; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% {opacity:0; transform: scale(0.5) translateY(50px);} 100% {opacity:1; transform: scale(1) translateY(0);} }
+        .chat-header { background: #0f172a; color: white; padding: 18px; font-family: 'Outfit'; display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; }
+        .avatar-selector { display: flex; gap: 12px; padding: 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; overflow-x: auto; scrollbar-width: none; }
+        .av-icon { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s; object-fit: cover; background: #fff; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .av-icon.active { border-color: #10b981; transform: scale(1.15); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #fdfdfc; font-family: 'Inter'; font-size: 1rem; }
+        .msg { padding: 12px 18px; border-radius: 18px; max-width: 85%; line-height: 1.5; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .msg-ia { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0c4a6e; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .msg-user { background: #0f172a; color: #f8fafc; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-input-area { display: flex; padding: 15px; border-top: 1px solid #e2e8f0; background: white; gap: 10px; }
+        .chat-input-area input { flex: 1; padding: 12px 18px; border: 1px solid #cbd5e1; border-radius: 25px; outline: none; font-family: 'Inter'; font-size: 1rem; }
+        .chat-input-area button { background: #0ea5e9; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .modal-qr { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 500; opacity: 0; transition: opacity 0.3s; }
+        .qr-box { background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.25); transform: translateY(20px); }
+        
+        .bottom-bar { position: absolute; bottom: 20px; display: flex; gap: 15px; align-items: center; justify-content: center; width: 100%; z-index: 90; }
+        .bottom-bar .btn-tool { font-size: 0.9rem; padding: 8px 15px; }
+
+        .app-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .app-card h4 { color: #0284c7; }
+        
+        table.materials-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 1rem; }
+        table.materials-table th, table.materials-table td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: center; }
+        table.materials-table th { background: #f1f5f9; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="btn-tool" onclick="downloadScreenshot()">📸 Captura</button>
+        <button class="btn-tool" onclick="showQR()">🔗 QR</button>
+        <button class="btn-tool" onclick="shareNotebook()">📤 Compartir</button>
+        <button class="btn-tool" onclick="toggleDarkMode()">🌙 Tema</button>
+    </div>
+
+    <div class="notebook-wrapper">
+        <div class="notebook" id="notebook-canvas">
+            <div class="spine" id="spine-rings"></div>
+            
+            <div class="page-container">
+                <!-- SPREAD 1: Portada y Reflexión -->
+                <div class="page page-left paper-lined active" id="p1">
+                    <br><br><br>
+                    <h1 class="title-hand">Óptica Geométrica:<br>Reflexión y Refracción de la Luz</h1>
+                    <p class="author">Por: Oscar Alejandro Ramírez Espinosa<br>y Jeny Maritza Mora Cardona</p>
+                    <div style="width:100%; height: 2px; background: #e2e8f0; margin: 20px 0;"></div>
+                    <p class="subtitle" style="color: #0ea5e9;">Leyes de Snell y Aplicaciones en Ingeniería Moderna</p>
+                    <p class="subtitle" style="font-size: 0.95rem;">Ingeniería Industrial</p>
+                    
+                    <div style="text-align:center; margin-top: 30px;">
+                        <svg width="300" height="200" viewBox="0 0 300 200" style="background:#f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+                            <!-- Top Medium -->
+                            <rect x="0" y="0" width="300" height="100" fill="#e0f2fe" opacity="0.5"/>
+                            <!-- Bottom Medium -->
+                            <rect x="0" y="100" width="300" height="100" fill="#bae6fd" opacity="0.8"/>
+                            <!-- Normal -->
+                            <line x1="150" y1="20" x2="150" y2="180" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5,5"/>
+                            <!-- Interface -->
+                            <line x1="0" y1="100" x2="300" y2="100" stroke="#334155" stroke-width="3"/>
+                            <!-- Incident Ray -->
+                            <line x1="50" y1="20" x2="150" y2="100" stroke="#ef4444" stroke-width="3"/>
+                            <polygon points="110,68 116,56 122,64" fill="#ef4444" transform="rotate(-38 116 62)"/>
+                            <!-- Reflected Ray -->
+                            <line x1="150" y1="100" x2="250" y2="20" stroke="#3b82f6" stroke-width="3"/>
+                            <polygon points="200,60 190,52 188,62" fill="#3b82f6" transform="rotate(-52 194 57)"/>
+                            <!-- Refracted Ray -->
+                            <line x1="150" y1="100" x2="200" y2="180" stroke="#10b981" stroke-width="3"/>
+                            <polygon points="175,140 165,130 170,125" fill="#10b981" transform="rotate(30 170 132)"/>
+                            <!-- Labels -->
+                            <text x="70" y="50" fill="#ef4444" font-family="Inter" font-weight="bold">θ₁</text>
+                            <text x="220" y="50" fill="#3b82f6" font-family="Inter" font-weight="bold">θᵣ</text>
+                            <text x="175" y="150" fill="#10b981" font-family="Inter" font-weight="bold">θ₂</text>
+                            <text x="20" y="80" fill="#64748b" font-family="Inter">n₁</text>
+                            <text x="20" y="120" fill="#64748b" font-family="Inter">n₂ > n₁</text>
+                        </svg>
+                    </div>
+                    <div class="page-number">1</div>
+                </div>
+
+                <div class="page page-right paper-lined active" id="p2">
+                    <h2>1. Reflexión de la Luz</h2>
+                    <p>La <span class="highlight">reflexión</span> ocurre cuando la luz choca contra una superficie y rebota hacia el mismo medio de origen. Dependiendo de la superficie, la reflexión puede ser <strong>especular</strong> (superficies lisas como espejos) o <strong>difusa</strong> (superficies rugosas).</p>
+                    
+                    <h3>Ley de la Reflexión</h3>
+                    <p>El ángulo de incidencia es siempre igual al ángulo de reflexión, ambos medidos con respecto a la línea <strong>normal</strong> (perpendicular) a la superficie en el punto de incidencia.</p>
+                    <div class="math-box">
+                        $$ \theta_i = \theta_r $$
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 15px;">
+                        <svg width="400" height="150" viewBox="0 0 400 150" style="background:#fff; border-radius:8px; border:1px solid #e2e8f0;">
+                            <text x="70" y="20" font-family="Outfit" font-size="14" fill="#0f172a">Reflexión Especular</text>
+                            <text x="260" y="20" font-family="Outfit" font-size="14" fill="#0f172a">Reflexión Difusa</text>
+                            
+                            <!-- Specular -->
+                            <line x1="20" y1="120" x2="180" y2="120" stroke="#334155" stroke-width="4"/>
+                            <line x1="100" y1="40" x2="100" y2="120" stroke="#94a3b8" stroke-dasharray="4,4"/>
+                            <line x1="40" y1="40" x2="100" y2="120" stroke="#ef4444" stroke-width="2"/>
+                            <line x1="100" y1="120" x2="160" y2="40" stroke="#3b82f6" stroke-width="2"/>
+                            
+                            <!-- Diffuse -->
+                            <path d="M 220 120 Q 230 110 240 120 T 260 115 T 280 125 T 300 115 T 320 120 T 340 110 T 360 120" fill="none" stroke="#334155" stroke-width="4"/>
+                            <line x1="240" y1="40" x2="260" y2="115" stroke="#ef4444" stroke-width="2"/>
+                            <line x1="260" y1="115" x2="230" y2="50" stroke="#3b82f6" stroke-width="2"/>
+                            <line x1="280" y1="40" x2="300" y2="115" stroke="#ef4444" stroke-width="2"/>
+                            <line x1="300" y1="115" x2="350" y2="60" stroke="#3b82f6" stroke-width="2"/>
+                            <line x1="320" y1="40" x2="330" y2="115" stroke="#ef4444" stroke-width="2"/>
+                            <line x1="330" y1="115" x2="290" y2="50" stroke="#3b82f6" stroke-width="2"/>
+                        </svg>
+                    </div>
+
+                    <p style="margin-top:20px;">Prueba ajustando el ángulo del láser contra el espejo:</p>
+                    <canvas id="reflectionCanvas" height="150"></canvas>
+                    <input type="range" id="slider-ref-angle" min="10" max="80" value="45" style="margin-top:10px;">
+                    
+                    <div class="page-number">2</div>
+                </div>
+
+                <!-- SPREAD 2: Refracción y Panel -->
+                <div class="page page-left paper-lined" id="p3">
+                    <h2>2. Refracción y Ley de Snell</h2>
+                    <p>La <span class="highlight">refracción</span> es el cambio de dirección que experimenta una onda de luz al pasar de un medio a otro con distinto <strong>índice de refracción ($n$)</strong>. Esto ocurre porque la velocidad de la luz cambia según el medio material.</p>
+                    
+                    <div class="math-box" style="margin: 15px 0;">
+                        $$ n_1 \sin(\theta_1) = n_2 \sin(\theta_2) \quad \text{y} \quad n = \frac{c}{v} $$
+                    </div>
+
+                    <table class="materials-table">
+                        <tr><th>Material</th><th>Índice (n)</th><th>Material</th><th>Índice (n)</th></tr>
+                        <tr><td>Vacío / Aire</td><td>1.00</td><td>Vidrio Crown</td><td>1.52</td></tr>
+                        <tr><td>Agua</td><td>1.33</td><td>Vidrio Flint</td><td>1.62</td></tr>
+                        <tr><td>Aceite / Cuarzo</td><td>~1.46</td><td>Diamante</td><td>2.42</td></tr>
+                    </table>
+
+                    <div class="alert-box">
+                        <h4 style="margin-bottom: 5px; color:#b91c1c;">Reflexión Total Interna (RTI)</h4>
+                        <p style="margin:0; font-size: 0.95rem;">Cuando la luz pasa de un medio más denso a uno menos denso ($n_1 > n_2$), si el ángulo de incidencia supera el <strong>ángulo crítico</strong>, la luz no se refracta, sino que se refleja totalmente en el interior del primer medio.</p>
+                        <div class="math-box" style="padding:5px; margin: 10px 0; font-size:1.1rem; background:transparent; border:none; box-shadow:none;">
+                            $$ \theta_c = \sin^{-1}\left(\frac{n_2}{n_1}\right) $$
+                        </div>
+                    </div>
+                    
+                    <div class="page-number">3</div>
+                </div>
+
+                <div class="page page-right paper-graph" id="p4">
+                    <h2><span style="color:#0ea5e9">■</span> 3. Panel de Control Óptico</h2>
+                    <p>Configura los parámetros para la simulación interactiva de la página siguiente.</p>
+                    
+                    <div class="dashboard">
+                        <div class="telemetry">
+                            <div class="stat-box">
+                                <div class="stat-val" id="val-thi">30.0°</div>
+                                <div class="stat-lbl">Ángulo Incidente θ₁</div>
+                            </div>
+                            <div class="stat-box" id="box-thr">
+                                <div class="stat-val" id="val-thr" style="color:#10b981;">19.2°</div>
+                                <div class="stat-lbl">Ángulo Refractado θ₂</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-val" id="val-thc">--</div>
+                                <div class="stat-lbl">Ángulo Crítico θ_c</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-val" id="val-n1">1.00</div>
+                                <div class="stat-lbl">Índice Superior n₁</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-val" id="val-n2">1.52</div>
+                                <div class="stat-lbl">Índice Inferior n₂</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-val" id="val-vel">0.66</div>
+                                <div class="stat-lbl">Velocidad v₂/v₁</div>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Ángulo Incidente <span id="lbl-thi">30°</span></label>
+                            <input type="range" id="slider-thi" min="0" max="89" step="1" value="30">
+                        </div>
+
+                        <div class="control-group" style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label>Medio Superior (n₁)</label>
+                                <select id="sel-n1">
+                                    <option value="1.00">Aire (1.00)</option>
+                                    <option value="1.33">Agua (1.33)</option>
+                                    <option value="1.46">Cuarzo (1.46)</option>
+                                    <option value="1.47">Aceite (1.47)</option>
+                                    <option value="1.49">Acrílico (1.49)</option>
+                                    <option value="1.52">Vidrio Crown (1.52)</option>
+                                    <option value="1.62">Vidrio Flint (1.62)</option>
+                                    <option value="2.42">Diamante (2.42)</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label>Medio Inferior (n₂)</label>
+                                <select id="sel-n2">
+                                    <option value="1.00">Aire (1.00)</option>
+                                    <option value="1.33">Agua (1.33)</option>
+                                    <option value="1.46">Cuarzo (1.46)</option>
+                                    <option value="1.47">Aceite (1.47)</option>
+                                    <option value="1.49">Acrílico (1.49)</option>
+                                    <option value="1.52" selected>Vidrio Crown (1.52)</option>
+                                    <option value="1.62">Vidrio Flint (1.62)</option>
+                                    <option value="2.42">Diamante (2.42)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="snell-equation-live" class="math-box" style="font-size: 1.1rem; padding: 10px;">
+                            <!-- KaTeX dynamic injected here -->
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button class="btn-action" style="flex: 1; background: #f59e0b;" onclick="setCriticalAngle()">Ver Ángulo Crítico</button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn-action" style="max-width: 80%; background:#1e293b;" onclick="goToSpread(1)">► Ver Simulación Óptica</button>
+                    </div>
+                    <div class="page-number">4</div>
+                </div>
+
+                <!-- SPREAD 3: Canvas Principal y Prismas -->
+                <div class="page page-left paper-graph" id="p5">
+                    <h2><span style="color:#ef4444">■</span> Simulación Óptica Interactiva</h2>
+                    <p style="font-size: 0.9rem;">Visualización de trazado de rayos con cálculo dinámico. Los fotones animados viajan en la dirección de propagación calculada.</p>
+                    
+                    <canvas id="opticsCanvas" height="400"></canvas>
+                    
+                    <p style="font-size: 0.85rem; color: #64748b; margin-top: 10px; text-align: center;">* Arrastra el láser en el canvas para cambiar el ángulo de incidencia manualmente.</p>
+                    <div class="page-number">5</div>
+                </div>
+
+                <div class="page page-right paper-graph" id="p6">
+                    <h2>4. Prismas Ópticos y Dispersión</h2>
+                    <p>Un prisma triangular refracta la luz dos veces. Debido a que el índice de refracción depende ligeramente de la longitud de onda (ecuación de Cauchy), la luz blanca se dispersa en su espectro cromático.</p>
+                    
+                    <canvas id="prismCanvas" height="350"></canvas>
+                    
+                    <div class="control-group" style="margin-top: 20px;">
+                        <label>Ángulo del Prisma <span id="lbl-prism-angle">60°</span></label>
+                        <input type="range" id="slider-prism-angle" min="30" max="80" step="1" value="60">
+                    </div>
+                    <div class="control-group">
+                        <label>Índice Base del Prisma <span id="lbl-prism-n">1.52</span></label>
+                        <input type="range" id="slider-prism-n" min="1.30" max="2.00" step="0.01" value="1.52">
+                    </div>
+                    
+                    <div class="page-number">6</div>
+                </div>
+
+                <!-- SPREAD 4: Lentes y Gráficas -->
+                <div class="page page-left paper-graph" id="p7">
+                    <h2>5. Lentes y Formación de Imágenes</h2>
+                    <p>Las lentes curvas utilizan la refracción para enfocar o divergir la luz. La imagen formada depende de la distancia focal ($f$) y la posición del objeto ($d_o$).</p>
+                    
+                    <div class="math-box" style="font-size: 1.1rem; padding: 10px; margin: 10px 0;">
+                        $$ \frac{1}{f} = \frac{1}{d_o} + \frac{1}{d_i} \quad ; \quad M = -\frac{d_i}{d_o} $$
+                    </div>
+                    
+                    <canvas id="lensCanvas" height="300"></canvas>
+                    
+                    <div style="display:flex; justify-content:space-between; margin-top:15px; align-items:center;">
+                        <button class="btn-action" id="btn-lens-type" style="padding:8px 15px; font-size:0.9rem;" onclick="toggleLensType()">Cambiar a Divergente</button>
+                        <div style="font-family:'Outfit'; font-weight:bold; color:#0ea5e9;">Distancia Imagen: <span id="val-di">--</span> px | Magnificación: <span id="val-mag">--</span></div>
+                    </div>
+                    
+                    <div class="control-group" style="margin-top: 15px;">
+                        <label>Distancia Focal (|f|) <span id="lbl-lens-f">100 px</span></label>
+                        <input type="range" id="slider-lens-f" min="50" max="200" step="5" value="100">
+                    </div>
+                    <div class="control-group">
+                        <label>Distancia Objeto (d_o) <span id="lbl-lens-do">200 px</span></label>
+                        <input type="range" id="slider-lens-do" min="50" max="400" step="5" value="200">
+                    </div>
+                    
+                    <div class="page-number">7</div>
+                </div>
+
+                <div class="page page-right paper-graph" id="p8">
+                    <h2>6. Cartografía Óptica Analítica</h2>
+                    
+                    <p style="font-size: 0.9rem; margin-bottom: 5px;"><strong>Ley de Snell:</strong> $\theta_2$ vs $\theta_1$ para distintas interfaces.</p>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="chartTheta"></canvas>
+                    </div>
+
+                    <p style="font-size: 0.9rem; margin-bottom: 5px;"><strong>Velocidad vs Índice:</strong> $v = c/n$</p>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="chartVelocity"></canvas>
+                    </div>
+                    
+                    <button class="btn-action" style="background:#475569; width:100%;" onclick="resetCharts()">🎯 Re-Centrar Gráficas</button>
+                    <div class="page-number">8</div>
+                </div>
+
+                <!-- SPREAD 5: Fibras Opticas y Aplicaciones -->
+                <div class="page page-left paper-graph" id="p9">
+                    <h2>7. Reflexión Total Interna y Fibra Óptica</h2>
+                    <p>Las fibras ópticas basan su funcionamiento en atrapar la luz en un núcleo de vidrio mediante reflexiones totales internas sucesivas contra un revestimiento de menor índice.</p>
+                    
+                    <canvas id="fiberCanvas" height="250"></canvas>
+                    
+                    <p style="margin-top:15px;">Para que exista transmisión confinada, la luz debe inyectarse dentro del <strong>cono de aceptación</strong>, definido por la Apertura Numérica (NA) de la fibra.</p>
+                    
+                    <div class="math-box" style="font-size: 1.1rem; padding: 10px;">
+                        $$ \text{NA} = \sqrt{n_{\text{núcleo}}^2 - n_{\text{revestimiento}}^2} $$
+                    </div>
+                    <div class="page-number">9</div>
+                </div>
+
+                <div class="page page-right paper-lined" id="p10">
+                    <h2>8. Aplicaciones en Ingeniería Moderna</h2>
+                    
+                    <div class="app-card">
+                        <h4>📡 Telecomunicaciones</h4>
+                        <p style="font-size: 0.9rem; margin:0;">Cables submarinos y redes FTTH utilizan pulsos láser en fibras ópticas monocromáticas para transmitir terabits por segundo sin atenuación electromagnética.</p>
+                    </div>
+                    
+                    <div class="app-card">
+                        <h4>⚕️ Instrumentación Médica</h4>
+                        <p style="font-size: 0.9rem; margin:0;">Los endoscopios flexibles usan guías de ondas ópticas para iluminar y retornar imágenes en tiempo real de órganos internos de forma no invasiva.</p>
+                    </div>
+                    
+                    <div class="app-card">
+                        <h4>🏭 Sensores Industriales</h4>
+                        <p style="font-size: 0.9rem; margin:0;">Fotocélulas de reflexión retro-dirigida y sensores láser de triangulación garantizan precisión milimétrica en líneas de ensamblaje robóticas.</p>
+                    </div>
+                    
+                    <div class="app-card">
+                        <h4>👁️ Sistemas de Visión Artificial</h4>
+                        <p style="font-size: 0.9rem; margin:0;">El diseño de sistemas multilente (Doublet Gauss, etc.) corrige aberraciones cromáticas para inspección automatizada de calidad industrial.</p>
+                    </div>
+                    
+                    <p style="margin-top: 30px; font-style: italic; text-align: center; color: #64748b;">"La manipulación de la luz es el pilar de las tecnologías del siglo XXI."</p>
+                    <div class="page-number">10</div>
+                </div>
+            </div>
+            
+            <button class="nav-btn" id="btn-prev" onclick="goToSpread(-1)" disabled>◄ Atrás</button>
+            <button class="nav-btn" id="btn-next" onclick="goToSpread(1)">Siguiente ►</button>
+        </div>
+    </div>
+
+    <!-- Chatbot Box -->
+    <div class="chatbot">
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header">
+                <div style="display: flex; align-items:center; gap:10px;">
+                    <div style="width:12px; height:12px; background:#10b981; border-radius:50%; box-shadow: 0 0 8px #10b981;"></div>
+                    <span id="activeAvatarName" style="font-weight: 800; letter-spacing: 0.5px;">Albert Einstein</span>
+                </div>
+                <span style="cursor: pointer; font-size:1.5rem; opacity:0.8; transition:0.2s;" onclick="toggleChat()" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">✖</span>
+            </div>
+            <div class="avatar-selector">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/d/d3/Albert_Einstein_Head.jpg" class="av-icon active" onclick="setAvatar('Albert Einstein', this, '¡Hola! La luz es fascinante — es onda y partícula a la vez. Pregúntame sobre cómo se curva al cambiar de medio.')" title="Einstein">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/3/39/GodfreyKneller-IsaacNewton-1689.jpg" class="av-icon" onclick="setAvatar('Isaac Newton', this, 'La refracción obedece leyes matemáticas precisas. Permíteme explicar las bases del comportamiento corpuscular de los rayos.')" title="Newton">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Carl_Sagan_Planetary_Society.JPG" class="av-icon" onclick="setAvatar('Carl Sagan', this, 'Los arcoíris, las estrellas, las lentes gravitacionales... todo es óptica en acción cósmica. ¿Qué quieres explorar hoy?')" title="Sagan">
+            </div>
+            <div class="chat-body" id="chatBody">
+                <div class="msg msg-ia" id="welcomeMsg">¡Hola! La luz es fascinante — es onda y partícula a la vez. Pregúntame sobre cómo se curva al cambiar de medio.</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Pregunta sobre reflexión, Snell, lentes..." onkeypress="if(event.key==='Enter') sendChat()">
+                <button onclick="sendChat()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="chat-bubble-btn" onclick="toggleChat()">
+            <svg width="30" height="30" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+        </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+        <button class="btn-tool" onclick="toggleAudio()" id="btn-audio">🔇 Sonido Lab: OFF</button>
+    </div>
+
+    <!-- QR Modal -->
+    <div class="modal-qr" id="qrModal">
+        <div class="qr-box">
+            <h2 style="margin-bottom:15px; color:#0f172a; font-family:'Outfit';">Enlace Móvil</h2>
+            <div id="qrcode" style="display: flex; justify-content:center; margin: 20px 0;"></div>
+            <span onclick="document.getElementById('qrModal').style.opacity = '0'; setTimeout(()=> {document.getElementById('qrModal').style.display = 'none'}, 300)" style="cursor:pointer; color:#0ea5e9; font-weight:bold;">Cerrar</span>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        // --- 1. Page Turn System ---
+        let currentSpread = 0;
+        const spreads = [ [1,2], [3,4], [5,6], [7,8], [9,10] ];
+        
+        // Build rings
+        const spine = document.getElementById('spine-rings');
+        for(let i=0; i<16; i++) { let ring = document.createElement('div'); ring.className = 'ring'; spine.appendChild(ring); }
+
+        function goToSpread(dir) {
+            let pL = document.getElementById('p' + spreads[currentSpread][0]);
+            let pR = document.getElementById('p' + spreads[currentSpread][1]);
+            
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('anim-next-out', 'anim-next-in', 'anim-prev-out', 'anim-prev-in'));
+            
+            currentSpread += dir;
+            let nL = document.getElementById('p' + spreads[currentSpread][0]);
+            let nR = document.getElementById('p' + spreads[currentSpread][1]);
+            
+            if (dir > 0) {
+                pR.classList.add('anim-next-out'); nL.classList.add('anim-next-in');
+            } else {
+                pL.classList.add('anim-prev-out'); nR.classList.add('anim-prev-in');
+            }
+            
+            setTimeout(() => {
+                pL.classList.remove('active'); pR.classList.remove('active');
+                nL.classList.add('active'); nR.classList.add('active');
+                resizeCanvasElements();
+            }, 850);
+            
+            document.getElementById('btn-prev').disabled = currentSpread === 0;
+            document.getElementById('btn-next').disabled = currentSpread === spreads.length - 1;
+        }
+
+        // --- 2. Optics Core Engine ---
+        let n1 = 1.00, n2 = 1.52;
+        let thi = 30; // deg
+        let particles = [];
+        let p5time = 0;
+        let isDraggingOptics = false;
+
+        function updateSnellMath() {
+            let thi_rad = thi * Math.PI / 180;
+            let sin_thr = (n1 / n2) * Math.sin(thi_rad);
+            
+            document.getElementById('val-thi').innerText = thi.toFixed(1) + "°";
+            document.getElementById('val-n1').innerText = n1.toFixed(2);
+            document.getElementById('val-n2').innerText = n2.toFixed(2);
+            document.getElementById('val-vel').innerText = (n1/n2).toFixed(2);
+
+            let liveEq = `$$ ${n1.toFixed(2)} \\sin(${thi.toFixed(1)}^\\circ) = ${n2.toFixed(2)} \\sin(\\theta_2) $$`;
+
+            let thc = NaN;
+            if(n1 > n2) {
+                thc = Math.asin(n2/n1) * 180 / Math.PI;
+                document.getElementById('val-thc').innerText = thc.toFixed(1) + "°";
+            } else {
+                document.getElementById('val-thc').innerText = "--";
+            }
+
+            let boxThr = document.getElementById('box-thr');
+            if (sin_thr > 1) { // TIR
+                document.getElementById('val-thr').innerText = "RTI";
+                document.getElementById('val-thr').style.color = "#ef4444";
+                boxThr.classList.add('alert');
+                liveEq += `$$ \\Rightarrow \\text{Reflexión Total Interna} $$`;
+            } else {
+                let thr = Math.asin(sin_thr) * 180 / Math.PI;
+                document.getElementById('val-thr').innerText = thr.toFixed(1) + "°";
+                document.getElementById('val-thr').style.color = "#10b981";
+                boxThr.classList.remove('alert');
+                liveEq += `$$ \\theta_2 = ${thr.toFixed(1)}^\\circ $$`;
+            }
+
+            document.getElementById('snell-equation-live').innerText = liveEq;
+            if (window.renderMathInElement) {
+                renderMathInElement(document.getElementById('snell-equation-live'), { delimiters: [{left: "$$", right: "$$", display: true}] });
+            }
+        }
+
+        document.getElementById('slider-thi').addEventListener('input', e => { thi = parseFloat(e.target.value); updateSnellMath(); });
+        document.getElementById('sel-n1').addEventListener('change', e => { n1 = parseFloat(e.target.value); updateSnellMath(); });
+        document.getElementById('sel-n2').addEventListener('change', e => { n2 = parseFloat(e.target.value); updateSnellMath(); });
+
+        window.setCriticalAngle = function() {
+            if(n1 > n2) {
+                thi = Math.asin(n2/n1) * 180 / Math.PI;
+                document.getElementById('slider-thi').value = thi;
+                updateSnellMath();
+            } else {
+                alert("El ángulo crítico solo existe cuando n1 > n2 (de un medio más denso a uno menos denso).");
+            }
+        }
+
+        // --- 3. Canvas Renders ---
+        function resizeCanvasElements() {
+            const canvases = ['reflectionCanvas', 'opticsCanvas', 'prismCanvas', 'lensCanvas', 'fiberCanvas'];
+            canvases.forEach(id => {
+                let cvs = document.getElementById(id);
+                if(cvs && cvs.parentElement) {
+                    cvs.width = cvs.parentElement.clientWidth - 30; // padding
+                }
+            });
+        }
+        window.addEventListener('resize', resizeCanvasElements);
+
+        // Rendering Loop
+        function drawGlowLine(ctx, x1, y1, x2, y2, color, blur) {
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+            ctx.strokeStyle = color; ctx.lineWidth = 4;
+            ctx.shadowBlur = blur; ctx.shadowColor = color; ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function animLoop(timestamp) {
+            p5time = timestamp / 1000;
+            
+            // Reflection Canvas
+            if(currentSpread === 0) {
+                const rCvs = document.getElementById('reflectionCanvas');
+                if(rCvs && rCvs.width > 0) {
+                    const ctx = rCvs.getContext('2d');
+                    ctx.clearRect(0,0,rCvs.width,rCvs.height);
+                    let cx = rCvs.width / 2; let cy = rCvs.height - 30;
+                    
+                    // Draw mirror
+                    ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(rCvs.width - 20, cy);
+                    ctx.strokeStyle = '#334155'; ctx.lineWidth = 4; ctx.stroke();
+                    for(let i=25; i<rCvs.width-25; i+=10) {
+                        ctx.beginPath(); ctx.moveTo(i, cy); ctx.lineTo(i-5, cy+10);
+                        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.stroke();
+                    }
+                    
+                    // Draw normal
+                    ctx.beginPath(); ctx.moveTo(cx, 10); ctx.lineTo(cx, cy);
+                    ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([5,5]); ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]);
+                    
+                    // Angles
+                    let refSlider = document.getElementById('slider-ref-angle');
+                    let rAng = parseFloat(refSlider ? refSlider.value : 45);
+                    let rRad = rAng * Math.PI / 180;
+                    let L = rCvs.height * 1.5;
+                    
+                    let incX = cx - L * Math.sin(rRad);
+                    let incY = cy - L * Math.cos(rRad);
+                    drawGlowLine(ctx, incX, incY, cx, cy, '#ef4444', 15);
+                    
+                    let refX = cx + L * Math.sin(rRad);
+                    let refY = cy - L * Math.cos(rRad);
+                    drawGlowLine(ctx, cx, cy, refX, refY, '#3b82f6', 15);
+                    
+                    // Draw angle values
+                    ctx.fillStyle = '#ef4444'; ctx.font = "bold 14px Inter"; ctx.textAlign="center";
+                    ctx.fillText(rAng + "°", cx - 40*Math.sin(rRad/2), cy - 40*Math.cos(rRad/2));
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fillText(rAng + "°", cx + 40*Math.sin(rRad/2), cy - 40*Math.cos(rRad/2));
+                }
+            } else if(currentSpread === 2) {
+                const cvs = document.getElementById('opticsCanvas');
+                if(cvs.width > 0) {
+                    const ctx = cvs.getContext('2d');
+                    ctx.clearRect(0,0,cvs.width,cvs.height);
+                    
+                    let cx = cvs.width / 2; let cy = cvs.height / 2;
+                    
+                    // Mediums
+                    ctx.fillStyle = `rgba(56, 189, 248, ${0.1 * n1})`; ctx.fillRect(0,0,cvs.width,cy);
+                    ctx.fillStyle = `rgba(16, 185, 129, ${0.1 * n2})`; ctx.fillRect(0,cy,cvs.width,cy);
+                    
+                    // Interface and Normal
+                    ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(cvs.width,cy);
+                    ctx.strokeStyle = '#334155'; ctx.lineWidth=2; ctx.stroke();
+                    
+                    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,cvs.height);
+                    ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([10,10]); ctx.stroke(); ctx.setLineDash([]);
+                    
+                    // Calculations
+                    let thi_rad = thi * Math.PI/180;
+                    let L = 300;
+                    let incX = cx - L * Math.sin(thi_rad); let incY = cy - L * Math.cos(thi_rad);
+                    
+                    // Incident Ray
+                    drawGlowLine(ctx, incX, incY, cx, cy, '#ff6b35', 15);
+                    
+                    // Reflected Ray
+                    let refX = cx + L * Math.sin(thi_rad); let refY = cy - L * Math.cos(thi_rad);
+                    let sin_thr = (n1/n2)*Math.sin(thi_rad);
+                    let isTIR = sin_thr > 1;
+                    
+                    drawGlowLine(ctx, cx, cy, refX, refY, '#3b82f6', isTIR ? 30 : 10);
+                    
+                    // Refracted Ray
+                    let thr_rad = 0;
+                    if(!isTIR) {
+                        thr_rad = Math.asin(sin_thr);
+                        let refrX = cx + L * Math.sin(thr_rad); let refrY = cy + L * Math.cos(thr_rad);
+                        drawGlowLine(ctx, cx, cy, refrX, refrY, '#10b981', 15);
+                    } else {
+                        // Flash text
+                        if(Math.floor(p5time*4)%2===0) {
+                            ctx.fillStyle = '#ef4444'; ctx.font = "bold 20px Outfit"; ctx.textAlign="center";
+                            ctx.fillText("REFLEXIÓN TOTAL INTERNA", cx, cy + 100);
+                        }
+                    }
+
+                    // Draw Angles
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    
+                    // Incident Arc
+                    ctx.beginPath(); ctx.arc(cx, cy, 50, -Math.PI/2 - thi_rad, -Math.PI/2);
+                    ctx.strokeStyle = '#ff6b35'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = '#ff6b35'; ctx.font = "bold 14px Inter";
+                    ctx.fillText(thi.toFixed(1) + "°", cx - 70 * Math.sin(thi_rad/2), cy - 70 * Math.cos(thi_rad/2));
+
+                    // Reflected Arc
+                    ctx.beginPath(); ctx.arc(cx, cy, 60, -Math.PI/2, -Math.PI/2 + thi_rad);
+                    ctx.strokeStyle = '#3b82f6'; ctx.stroke();
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fillText(thi.toFixed(1) + "°", cx + 80 * Math.sin(thi_rad/2), cy - 80 * Math.cos(thi_rad/2));
+
+                    // Refracted Arc
+                    if(!isTIR && thi_rad > 0) {
+                        ctx.beginPath(); ctx.arc(cx, cy, 70, Math.PI/2 - thr_rad, Math.PI/2);
+                        ctx.strokeStyle = '#10b981'; ctx.stroke();
+                        ctx.fillStyle = '#10b981';
+                        let thr_deg = thr_rad * 180 / Math.PI;
+                        ctx.fillText(thr_deg.toFixed(1) + "°", cx + 90 * Math.sin(thr_rad/2), cy + 90 * Math.cos(thr_rad/2));
+                    }
+                    
+                    // Particles generator
+                    if(Math.random() < 0.2) particles.push({x: incX, y: incY, phase: 0});
+                    for(let i=particles.length-1; i>=0; i--) {
+                        let p = particles[i];
+                        p.phase += 0.02 * (343 / (n1*100)); // speed proportional to c/n
+                        if(p.phase <= 1) { // incident
+                            p.x = incX + (cx - incX)*p.phase; p.y = incY + (cy - incY)*p.phase;
+                        } else {
+                            let ph2 = p.phase - 1;
+                            if(isTIR || Math.random() > 0.5) { // go to reflection
+                                p.x = cx + (refX - cx)*ph2; p.y = cy + (refY - cy)*ph2;
+                            } else if(!isTIR) { // go to refraction
+                                let thr_rad = Math.asin(sin_thr);
+                                let refrX = cx + L * Math.sin(thr_rad); let refrY = cy + L * Math.cos(thr_rad);
+                                p.x = cx + (refrX - cx)*ph2; p.y = cy + (refrY - cy)*ph2;
+                            }
+                        }
+                        
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+                        ctx.fillStyle = '#fff'; ctx.shadowBlur = 10; ctx.shadowColor = '#fff'; ctx.fill(); ctx.shadowBlur=0;
+                        if(p.phase > 2) particles.splice(i, 1);
+                    }
+                    
+                    // Interaction
+                    cvs.onmousedown = () => isDraggingOptics = true;
+                    cvs.onmouseup = () => isDraggingOptics = false;
+                    cvs.onmousemove = (e) => {
+                        if(isDraggingOptics) {
+                            let rect = cvs.getBoundingClientRect();
+                            let mx = e.clientX - rect.left - cx; let my = cy - (e.clientY - rect.top);
+                            if(my > 0) {
+                                thi = Math.atan2(Math.abs(mx), my) * 180 / Math.PI;
+                                document.getElementById('slider-thi').value = thi;
+                                updateSnellMath();
+                            }
+                        }
+                    };
+                }
+                
+                // Prism Canvas
+                const pCvs = document.getElementById('prismCanvas');
+                if(pCvs.width > 0) {
+                    const ctx = pCvs.getContext('2d');
+                    ctx.clearRect(0,0,pCvs.width,pCvs.height);
+                    
+                    let pa = parseFloat(document.getElementById('slider-prism-angle').value);
+                    let pn = parseFloat(document.getElementById('slider-prism-n').value);
+                    document.getElementById('lbl-prism-angle').innerText = pa + "°";
+                    document.getElementById('lbl-prism-n').innerText = pn;
+                    
+                    let cx = pCvs.width/2; let cy = pCvs.height/2 + 50;
+                    let side = 200;
+                    let h = side * Math.sin(pa * Math.PI/180);
+                    
+                    // Draw Prism
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - h); ctx.lineTo(cx - side/2, cy); ctx.lineTo(cx + side/2, cy); ctx.closePath();
+                    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill();
+                    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.stroke();
+                    
+                    // Light beam
+                    let incY = cy - h/2; let incX = cx - side/4 - 150;
+                    drawGlowLine(ctx, incX, incY, cx - side/4, incY, '#fff', 15);
+                    
+                    // Dispersion approximation
+                    let colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
+                    for(let i=0; i<colors.length; i++) {
+                        let dn = pn + (colors.length-i)*0.01; // Cauchy dispersion fake
+                        let outAng = (dn - 1) * (pa * Math.PI/180); // Thin prism approximation for visuals
+                        
+                        let startX = cx - side/4 + (side/2)*i/10;
+                        let endX = startX + 200 * Math.cos(outAng);
+                        let endY = incY + 200 * Math.sin(outAng) + (i*5);
+                        
+                        drawGlowLine(ctx, cx - side/4, incY, startX + side/2.5, incY + (i*2), colors[i], 5); // internal
+                        drawGlowLine(ctx, startX + side/2.5, incY + (i*2), endX, endY, colors[i], 10); // external
+                    }
+                }
+            } else if (currentSpread === 3) {
+                // Lens Canvas
+                const lCvs = document.getElementById('lensCanvas');
+                if(lCvs.width > 0) {
+                    const ctx = lCvs.getContext('2d');
+                    ctx.clearRect(0,0,lCvs.width,lCvs.height);
+                    
+                    let f = parseFloat(document.getElementById('slider-lens-f').value);
+                    let do_val = parseFloat(document.getElementById('slider-lens-do').value);
+                    document.getElementById('lbl-lens-f').innerText = f + " px";
+                    document.getElementById('lbl-lens-do').innerText = do_val + " px";
+                    
+                    if(lensIsDivergent) f = -f;
+                    
+                    let di = 1 / (1/f - 1/do_val);
+                    let M = -di / do_val;
+                    
+                    document.getElementById('val-di').innerText = isFinite(di) ? di.toFixed(1) : "∞";
+                    document.getElementById('val-mag').innerText = isFinite(M) ? M.toFixed(2) : "∞";
+                    
+                    let cx = lCvs.width/2; let cy = lCvs.height/2;
+                    
+                    // Axis
+                    ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(lCvs.width,cy);
+                    ctx.strokeStyle = '#334155'; ctx.stroke();
+                    
+                    // Lens
+                    ctx.beginPath(); ctx.moveTo(cx, cy-100); ctx.lineTo(cx, cy+100);
+                    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth=4; ctx.stroke();
+                    
+                    // Focal points
+                    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(cx - Math.abs(f), cy, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + Math.abs(f), cy, 4, 0, Math.PI*2); ctx.fill();
+                    
+                    // Object
+                    let objHeight = 50;
+                    ctx.beginPath(); ctx.moveTo(cx - do_val, cy); ctx.lineTo(cx - do_val, cy - objHeight);
+                    ctx.strokeStyle = '#10b981'; ctx.lineWidth=3; ctx.stroke();
+                    // arrow
+                    ctx.beginPath(); ctx.moveTo(cx - do_val - 5, cy - objHeight + 10); ctx.lineTo(cx - do_val, cy - objHeight); ctx.lineTo(cx - do_val + 5, cy - objHeight + 10); ctx.stroke();
+                    
+                    // Rays
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; ctx.lineWidth=1.5;
+                    
+                    // Ray 1: Parallel to focus
+                    ctx.beginPath(); ctx.moveTo(cx - do_val, cy - objHeight); ctx.lineTo(cx, cy - objHeight);
+                    if(!lensIsDivergent) {
+                        ctx.lineTo(cx + di, cy - objHeight * M);
+                    } else {
+                        ctx.lineTo(cx + Math.abs(f)*2, cy - objHeight + (objHeight/Math.abs(f))*Math.abs(f)*2); // divergent path
+                    }
+                    ctx.stroke();
+                    
+                    // Ray 2: Center
+                    ctx.beginPath(); ctx.moveTo(cx - do_val, cy - objHeight); ctx.lineTo(cx, cy); ctx.lineTo(cx + (di>0?di:cx), cy + (di>0?objHeight*M:objHeight*M*(cx/di))); ctx.stroke();
+                    
+                    // Image
+                    if(isFinite(di)) {
+                        ctx.beginPath(); ctx.moveTo(cx + di, cy); ctx.lineTo(cx + di, cy - objHeight * M);
+                        ctx.strokeStyle = (di > 0) ? '#3b82f6' : '#ef4444'; // real=blue, virtual=red
+                        ctx.setLineDash(di < 0 ? [5,5] : []); ctx.lineWidth=3; ctx.stroke(); ctx.setLineDash([]);
+                        // arrow
+                        let imgDir = M > 0 ? -10 : 10;
+                        ctx.beginPath(); ctx.moveTo(cx + di - 5, cy - objHeight * M + imgDir); ctx.lineTo(cx + di, cy - objHeight * M); ctx.lineTo(cx + di + 5, cy - objHeight * M + imgDir); ctx.stroke();
+                    }
+                }
+            } else if (currentSpread === 4) {
+                 // Fiber Canvas
+                 const fCvs = document.getElementById('fiberCanvas');
+                 if(fCvs.width > 0) {
+                     const ctx = fCvs.getContext('2d');
+                     ctx.clearRect(0,0,fCvs.width,fCvs.height);
+                     
+                     let cy = fCvs.height/2;
+                     
+                     // Fiber core
+                     ctx.fillStyle = 'rgba(56, 189, 248, 0.2)'; ctx.fillRect(50, cy-30, fCvs.width-100, 60);
+                     // Fiber cladding
+                     ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4;
+                     ctx.beginPath(); ctx.moveTo(50, cy-30); ctx.lineTo(fCvs.width-50, cy-30); ctx.stroke();
+                     ctx.beginPath(); ctx.moveTo(50, cy+30); ctx.lineTo(fCvs.width-50, cy+30); ctx.stroke();
+                     
+                     // Bouncing ray
+                     let phase = (p5time * 200) % 100;
+                     ctx.beginPath(); ctx.moveTo(50, cy);
+                     for(let x=50; x<fCvs.width-50; x+=100) {
+                         ctx.lineTo(x+50, cy-25); ctx.lineTo(x+100, cy+25);
+                     }
+                     ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)'; ctx.lineWidth = 2; ctx.stroke();
+                     
+                     // Light pulses
+                     for(let x=50; x<fCvs.width-50; x+=100) {
+                         let px = x + phase;
+                         let py = cy + (px%100 < 50 ? -25*(px%50)/50 : -25 + 50*((px-50)%50)/50);
+                         ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2);
+                         ctx.fillStyle = '#fff'; ctx.shadowBlur=15; ctx.shadowColor='#10b981'; ctx.fill(); ctx.shadowBlur=0;
+                     }
+                 }
+            }
+            
+            requestAnimationFrame(animLoop);
+        }
+
+        let lensIsDivergent = false;
+        window.toggleLensType = function() {
+            lensIsDivergent = !lensIsDivergent;
+            document.getElementById('btn-lens-type').innerText = lensIsDivergent ? "Cambiar a Convergente" : "Cambiar a Divergente";
+        }
+
+        // --- 4. Charts Data & Config ---
+        let chartTheta, chartVelocity;
+        function initCharts() {
+            Chart.defaults.font.family = 'Inter';
+            Chart.defaults.color = '#475569';
+            
+            // Theta Graph
+            let t1 = [], t2_water = [], t2_glass = [];
+            for(let i=0; i<=90; i++) {
+                t1.push(i);
+                let rad = i*Math.PI/180;
+                let t_w = Math.asin((1.00/1.33)*Math.sin(rad))*180/Math.PI;
+                let t_g = Math.asin((1.00/1.52)*Math.sin(rad))*180/Math.PI;
+                t2_water.push(t_w); t2_glass.push(t_g);
+            }
+            
+            chartTheta = new Chart(document.getElementById('chartTheta').getContext('2d'), {
+                type: 'line',
+                data: { labels: t1, datasets: [
+                    { label: 'Aire a Agua (n=1.33)', data: t2_water, borderColor: '#38bdf8', tension: 0.2 },
+                    { label: 'Aire a Vidrio (n=1.52)', data: t2_glass, borderColor: '#ef4444', tension: 0.2 }
+                ]},
+                options: { responsive:true, maintainAspectRatio:false, plugins:{zoom:{zoom:{wheel:{enabled:true},mode:'xy'},pan:{enabled:true,mode:'xy'}}}, scales:{x:{title:{display:true, text:'Incidencia θ₁'}}, y:{title:{display:true, text:'Refracción θ₂'}}} }
+            });
+            
+            // Velocity Graph
+            chartVelocity = new Chart(document.getElementById('chartVelocity').getContext('2d'), {
+                type: 'line',
+                data: { labels: [1, 1.33, 1.52, 2.0, 2.42, 3.0], datasets: [{
+                    label: 'Velocidad (10⁸ m/s)', data: [3.00, 2.25, 1.97, 1.50, 1.24, 1.00], borderColor: '#10b981', fill:true, backgroundColor:'rgba(16, 185, 129, 0.1)'
+                }]},
+                options: { responsive:true, maintainAspectRatio:false, plugins:{zoom:{zoom:{wheel:{enabled:true},mode:'xy'},pan:{enabled:true,mode:'xy'}}}, scales:{x:{title:{display:true, text:'Índice n'}}, y:{title:{display:true, text:'Velocidad'}}} }
+            });
+        }
+        window.resetCharts = function() { chartTheta.resetZoom(); chartVelocity.resetZoom(); }
+
+        // --- 5. Chatbot System ---
+        window.toggleChat = function(){ let e = document.getElementById('chatPanel'); e.style.display = (e.style.display==='flex')?'none':'flex'; }
+        window.setAvatar = function(name, el, msg){ 
+            document.querySelectorAll('.av-icon').forEach(x=>x.classList.remove('active')); 
+            el.classList.add('active'); 
+            document.getElementById('activeAvatarName').innerText=name; 
+            document.getElementById('welcomeMsg').innerText=msg;
+        }
+        
+        function getBotResponse(input) {
+            let i = input.toLowerCase();
+            let av = document.getElementById('activeAvatarName').innerText;
+            
+            if(i.includes("snell") || i.includes("refraccion") || i.includes("refracción")) {
+                return "La Ley de Snell (n1·sin(θ1) = n2·sin(θ2)) dicta cómo la luz se dobla al cambiar de velocidad entre medios. Prueba ajustando los índices en la página 4.";
+            } else if(i.includes("reflexion") || i.includes("reflexión")) {
+                return "En la reflexión especular, el ángulo de incidencia siempre equivale al de reflexión. Es simetría pura del universo.";
+            } else if(i.includes("critico") || i.includes("crítico") || i.includes("total interna")) {
+                return "¡La reflexión total interna es clave! Ocurre cuando vas de un n mayor a uno menor y superas el ángulo crítico. Así funcionan las fibras ópticas (Pág 9).";
+            } else if(i.includes("lente") || i.includes("focal")) {
+                return "Las lentes convergentes unen los rayos reales, las divergentes los separan creando imágenes virtuales. Revisa la simulación en la pág 7.";
+            } else if(i.includes("prisma") || i.includes("dispersion")) {
+                return "El índice de refracción depende levemente del color (longitud de onda). Por eso el prisma separa la luz blanca en un arcoíris.";
+            } else {
+                if(av.includes("Einstein")) return "Todo es relativo, pero la velocidad de la luz en el vacío 'c' es la constante cósmica fundamental. Cerca de masas grandes, ¡incluso la luz se curva sin cambiar de medio!";
+                if(av.includes("Newton")) return "Si asumes que la luz está hecha de corpúsculos, puedes usar fuerzas en la frontera para derivar esto. Mi libro 'Opticks' lo explica en detalle.";
+                return "Estamos hechos de polvo de estrellas, y la óptica nos permite ver ese polvo a millones de años luz mediante espectroscopía. ¡Sigue explorando!";
+            }
+        }
+        
+        window.sendChat = function(){ 
+            let i = document.getElementById('chatInput'); if(!i.value)return; 
+            let c = document.getElementById('chatBody'); 
+            let um = document.createElement('div'); um.className="msg msg-user"; um.innerText=i.value; c.appendChild(um); 
+            c.scrollTop=c.scrollHeight;
+            let val = i.value; i.value='';
+            
+            setTimeout(()=>{ 
+                let bm=document.createElement('div'); bm.className="msg msg-ia"; 
+                bm.innerText=getBotResponse(val); 
+                c.appendChild(bm); c.scrollTop=c.scrollHeight; 
+            }, 800); 
+        }
+
+        // --- 6. Utilities & Audio ---
+        let audioCtx, osc;
+        window.toggleAudio = function() {
+            if(!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 120;
+                let gain = audioCtx.createGain(); gain.gain.value = 0.05;
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start();
+                document.getElementById('btn-audio').innerText = "🔊 Sonido Lab: ON";
+            } else {
+                if(audioCtx.state === 'suspended') { audioCtx.resume(); document.getElementById('btn-audio').innerText = "🔊 Sonido Lab: ON"; }
+                else { audioCtx.suspend(); document.getElementById('btn-audio').innerText = "🔇 Sonido Lab: OFF"; }
+            }
+        }
+        
+        window.toggleDarkMode = function() { document.body.classList.toggle('light-mode'); }
+        window.downloadScreenshot = function() { html2canvas(document.body).then(canvas => { let link = document.createElement('a'); link.download = 'Cuaderno_Optica.png'; link.href = canvas.toDataURL(); link.click(); }); }
+        let qri = false;
+        window.showQR = function() { document.getElementById('qrModal').style.display='flex'; setTimeout(()=> {document.getElementById('qrModal').style.opacity = '1'}, 10); if(!qri) { new QRCode(document.getElementById("qrcode"), {text: window.location.href, width: 200, height: 200}); qri=true; } }
+        window.shareNotebook = function() { navigator.clipboard.writeText(window.location.href); alert("¡Enlace copiado al portapapeles!"); }
+
+        // Boot
+        window.onload = () => { 
+            if(window.renderMathInElement) {
+                renderMathInElement(document.body, { 
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true}, 
+                        {left: "$", right: "$", display: false}
+                    ] 
+                });
+            }
+            updateSnellMath(); 
+            resizeCanvasElements(); 
+            initCharts(); 
+            requestAnimationFrame(animLoop); 
+        }
+    </script>
+</body>
+</html>
